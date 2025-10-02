@@ -11,7 +11,7 @@
         
         /* 基础样式 */
         body {
-            /* 将所有汉字替换为“果方”风格的字体栈 */
+            /* 字体栈 */
             font-family: 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'Inter', sans-serif;
             display: flex;
             justify-content: center;
@@ -41,46 +41,35 @@
             font-size: 1.8rem; 
         }
 
-        /* 核心修改：超维时间字体加粗、加大、增加冲击力 */
+        /* 核心优化：使用 clamp() 和 vw 实现动态字体大小 */
         #superTime {
-            /* 默认值 (适用于大多数手机，如 iPhone 16) */
-            font-size: 4.5rem; /* 减小到 4.5rem，解决溢出问题 */
+            /* 字体大小: 最小 3.5rem，随着视口宽度 (12vw) 缩放，最大 7rem */
+            font-size: clamp(3.5rem, 12vw, 7rem); 
+            
+            /* 字符间距: 最小 2px，随着视口宽度 (1vw) 缩放，最大 5px */
+            letter-spacing: clamp(2px, 1vw, 5px); 
+            
             font-weight: 900; 
             color: #3b82f6; 
-            letter-spacing: 4px; /* 略微减少间距以适应窄屏 */
             margin-bottom: 20px;
             line-height: 1;
-            /* 增加微妙的发光/阴影效果，模拟屏保的质感 */
+            /* 发光/阴影效果 */
             text-shadow: 0 0 12px rgba(59, 130, 246, 0.6); 
             white-space: nowrap; /* 确保时间不换行 */
-            overflow: hidden; /* 隐藏可能溢出的部分 */
+            /* 允许内容略微裁剪，但由于使用 clamp，溢出应已消除 */
+            overflow: hidden; 
         }
         
-        /* --- 手机排版优化 (适用于宽度小于 380px 的超窄屏) --- */
-        @media (max-width: 380px) {
-            #superTime {
-                font-size: 3.8rem; /* 针对 320px-360px 宽度手机进一步缩小字体 */
-                letter-spacing: 2px;
-            }
+        /* 常规时间字体在小屏上也适当缩小 */
+        @media (max-width: 480px) {
             #normalTime {
-                font-size: 1.5rem;
+                font-size: 1.4rem;
             }
         }
-
-        /* --- 桌面/平板优化 (min-width: 600px) --- */
-        @media (min-width: 600px) {
-            .clock-container {
-                padding: 40px 50px; 
-            }
-            #superTime {
-                font-size: 7rem; /* 增大桌面端字体 */
-                letter-spacing: 5px; /* 恢复更宽的间距 */
-            }
-        }
-
-        /* 增大常规时间与上一行（超维时间）的行间距 */
+        
+        /* 增大常规时间与超维时间的间距 */
         .footer-info {
-            margin-top: 30px; /* 增加上边距 */
+            margin-top: 30px; 
             padding-top: 20px;
             border-top: 2px solid #f1f5f9;
         }
@@ -92,7 +81,7 @@
             align-items: center;
             transition: all 0.2s;
             border-radius: 8px;
-            margin-bottom: 5px; /* 与时间数字保持间距 */
+            margin-bottom: 5px; 
         }
         .toggle-btn:hover {
             background-color: #f1f5f9;
@@ -107,7 +96,7 @@
         }
         
         #normalTime {
-            font-size: 1.8rem; /* 增大字体 */
+            font-size: 1.8rem; /* 桌面默认字体 */
             color: #FFC72C; 
             font-weight: 600;
             transition: all 0.3s;
@@ -122,7 +111,6 @@
             justify-content: center;
             margin-top: 15px;
             transition: opacity 0.5s;
-            /* 确保轮播文案也使用新的果方字体栈 */
             font-family: 'PingFang SC', 'Microsoft YaHei', 'SimHei', sans-serif;
         }
     </style>
