@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>25 小时趣味时钟</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 引入 Inter 字体 */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        /* 基础样式 */
+        body {
+            /* 将所有汉字替换为“果方”风格的字体栈 */
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f4f8; 
+            color: #1e293b;
+            text-align: center;
+        }
+
+        .clock-container {
+            background-color: #ffffff;
+            /* 响应式 padding */
+            padding: 30px 20px; 
+            border-radius: 16px; 
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+            width: 90%; 
+            max-width: 600px;
+            border: 1px solid #e2e8f0;
+        }
+
+        h1 {
+            color: #10b981; 
+            margin-bottom: 20px;
+            font-weight: 700;
+            font-size: 1.8rem; 
+        }
+
+        #superTime {
+            font-size: 4.5rem; 
+            font-weight: 900;
+            color: #3b82f6; 
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            line-height: 1;
+        }
+        
+        /* 桌面/平板优化 */
+        @media (min-width: 600px) {
+            .clock-container {
+                padding: 40px 50px; 
+            }
+            #superTime {
+                font-size: 6rem;
+            }
+        }
+
+        /* 增大常规时间与上一行（超维时间）的行间距 */
+        .footer-info {
+            margin-top: 30px; /* 增加上边距 */
+            padding-top: 20px;
+            border-top: 2px solid #f1f5f9;
+        }
+
+        .toggle-btn {
+            cursor: pointer;
+            padding: 10px;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.2s;
+            border-radius: 8px;
+            margin-bottom: 5px; /* 与时间数字保持间距 */
+        }
+        .toggle-btn:hover {
+            background-color: #f1f5f9;
+        }
+
+        .arrow-icon {
+            transition: transform 0.3s ease;
+            margin-left: 8px;
+        }
+        .arrow-icon.rotate-180 {
+            transform: rotate(180deg);
+        }
+        
+        #normalTime {
+            font-size: 1.8rem; /* 增大字体 */
+            color: #FFC72C; 
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        #rotatingQuote {
+            font-size: 1.0rem;
+            color: #64748b;
+            height: 25px; /* 固定高度，防止轮播时布局抖动 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 15px;
+            transition: opacity 0.5s;
+            /* 确保轮播文案也使用新的果方字体栈 */
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'SimHei', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="clock-container">
+        <h1>“25 小时”超维时钟</h1>
+        <!-- 超维时间显示区域 -->
+        <div class="time-display" id="superTime">--:--:--</div>
+        
+        <p class="explanation text-sm sm:text-base">
+            在这个趣味时钟里，一天被定义为 25 个小时。
+        </p>
+
+        <div class="footer-info">
+            <!-- 可点击区域，用于切换显示 -->
+            <div id="normalTimeToggle" class="toggle-btn mx-auto">
+                <!-- 初始标签，将被 JS 更新为 "城市名称 时间" -->
+                <span class="label text-base" id="localTimeLabel">正在定位...</span>
+                <svg id="toggleArrow" class="arrow-icon w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+
+            <!-- 常规时间显示容器 -->
+            <div id="normalTimeDisplay">
+                <span id="normalTime">--:--:--</span>
+            </div>
+
+            <!-- 自动轮换文案区域 -->
+            <p id="rotatingQuote" class="note"></p>
+        </div>
+    </div>
+
+    <script>
+        // 定义换算比例：常规秒数 * RATE = 超秒数 (25 / 24 ≈ 1.0416667)
+        const CONVERSION_RATE = 25 / 24; 
+        
+        // 全局存储用户时区ID，用于跨时区时间显示
+        window.USER_TIMEZONE_ID = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+        // --- 1. 文案轮换配置 ---
+        const quotes = [
+            "日月逝矣，岁不我与。",
+            "日月忽其不淹兮，春与秋其代序。",
+            "逝者如斯夫，不舍昼夜。",
+            "花有重开日，人无再少年。",
+            "日月之行，若出其中；星汉灿烂，若出其里。",
+        ];
+        let currentQuoteIndex = 0;
+        const quoteElement = document.getElementById('rotatingQuote');
+
+        /**
+         * 自动轮换底部文案
+         */
+        function rotateQuote() {
+            if (quoteElement) {
+                // 淡出效果
+                quoteElement.style.opacity = 0; 
+                setTimeout(() => {
+                    // 切换内容
+                    quoteElement.textContent = quotes[currentQuoteIndex];
+                    currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
+                    // 淡入效果
+                    quoteElement.style.opacity = 1; 
+                }, 500); // 0.5秒后切换内容
+            }
+        }
+        setInterval(rotateQuote, 3000);
+        // 首次加载立即显示
+        rotateQuote(); 
+
+        // --- 2. IP 地理定位和时区初始化 ---
+        
+        /**
+         * 通过 IP 获取用户的城市和时区，并更新标签
+         */
+        async function initializeTimeZoneDisplay() {
+            const timeZoneElement = document.getElementById('localTimeLabel');
+            timeZoneElement.textContent = '正在定位...';
+
+            try {
+                // 使用 ipapi.co 获取地理位置信息
+                // 启用指数退避重试机制
+                let data = null;
+                const maxRetries = 3;
+                let delay = 1000;
+                
+                for (let i = 0; i < maxRetries; i++) {
+                    try {
+                        const response = await fetch('https://ipapi.co/json/');
+                        if (response.ok) {
+                            data = await response.json();
+                            break;
+                        }
+                    } catch (error) {
+                        // 忽略错误，继续重试
+                    }
+                    if (i < maxRetries - 1) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    }
+                }
+
+                if (!data) throw new Error('Failed to fetch geolocation data after retries');
+                
+                // 提取城市名和时区ID
+                const city = data.city || '本地';
+                const timeZoneId = data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+                
+                // 存储时区ID
+                window.USER_TIMEZONE_ID = timeZoneId;
+
+                // 更新标签: "城市 时间"
+                timeZoneElement.textContent = `${city} 时间：`;
+
+            } catch (e) {
+                // 如果定位失败或API超时，回退到浏览器本地时区
+                timeZoneElement.textContent = '常规当地时间：';
+                window.USER_TIMEZONE_ID = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                console.warn("IP geolocation failed, falling back to browser local time.", e);
+            }
+        }
+
+
+        // --- 3. 时间显示逻辑 ---
+
+        /**
+         * 将总秒数（超秒）转换为 HH:MM:SS 格式的字符串 (超维时间)
+         */
+        function formatTime(totalSeconds) {
+            const hours = Math.floor(totalSeconds / 3600);
+            const remainingSeconds = totalSeconds % 3600;
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = Math.floor(remainingSeconds % 60);
+
+            // 对 25 取模
+            const h = String(hours % 25).padStart(2, '0'); 
+            const m = String(minutes).padStart(2, '0');
+            const s = String(seconds).padStart(2, '0');
+
+            return `${h}:${m}:${s}`;
+        }
+
+        /**
+         * 主要更新函数：计算和显示时间
+         */
+        function updateClock() {
+            const now = new Date();
+            
+            // A. 计算并更新超维时钟
+            const normalHours = now.getHours();
+            const normalMinutes = now.getMinutes();
+            const normalSeconds = now.getSeconds();
+            const normalMilliseconds = now.getMilliseconds();
+            
+            const totalNormalSeconds = (normalHours * 3600) + (normalMinutes * 60) + normalSeconds + (normalMilliseconds / 1000);
+            const totalSuperSeconds = totalNormalSeconds * CONVERSION_RATE;
+            document.getElementById('superTime').textContent = formatTime(totalSuperSeconds);
+            
+            // B. 更新常规时间显示（使用 IP 定位的时区）
+            const options = { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit', 
+                hour12: false, // 24小时制
+                timeZone: window.USER_TIMEZONE_ID 
+            };
+            // 使用 toLocaleTimeString 和时区ID来获取目标时区的准确时间
+            const formattedNormalTime = now.toLocaleTimeString('zh-CN', options);
+            document.getElementById('normalTime').textContent = formattedNormalTime;
+        }
+
+        // --- 4. 动画和初始化控制 ---
+        
+        // 点击切换显示/隐藏
+        document.getElementById('normalTimeToggle').addEventListener('click', function() {
+            const normalTimeDisplay = document.getElementById('normalTimeDisplay');
+            const arrowIcon = document.getElementById('toggleArrow');
+            
+            normalTimeDisplay.classList.toggle('hidden');
+            arrowIcon.classList.toggle('rotate-180');
+        });
+
+        // 动画循环
+        let lastTimestamp = 0;
+        const interval = 100; // 100毫秒更新一次
+
+        function animate(timestamp) {
+            if (timestamp - lastTimestamp > interval) {
+                updateClock();
+                lastTimestamp = timestamp;
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // 启动时区定位和时钟动画
+        initializeTimeZoneDisplay();
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
