@@ -41,13 +41,16 @@
             font-size: 1.8rem; 
         }
 
+        /* 核心修改：超维时间字体加粗、加大、增加冲击力 */
         #superTime {
-            font-size: 4.5rem; 
-            font-weight: 900;
-            color: #3b82f6; 
-            letter-spacing: 3px;
+            font-size: 5rem; /* 增大手机端字体 */
+            font-weight: 900; /* 最重磅级 */
+            color: #3b82f6; /* 核心蓝色 */
+            letter-spacing: 5px; /* 增加字母间距 */
             margin-bottom: 20px;
             line-height: 1;
+            /* 增加微妙的发光/阴影效果，模拟屏保的质感 */
+            text-shadow: 0 0 12px rgba(59, 130, 246, 0.6); 
         }
         
         /* 桌面/平板优化 */
@@ -56,7 +59,7 @@
                 padding: 40px 50px; 
             }
             #superTime {
-                font-size: 6rem;
+                font-size: 7rem; /* 增大桌面端字体 */
             }
         }
 
@@ -219,8 +222,7 @@
                 // 存储时区ID
                 window.USER_TIMEZONE_ID = timeZoneId;
 
-                // **核心修改：更新标签为 "城市 (时区ID) 时间："**
-                // 城市名 (中文) + 时区ID (英文/地名)
+                // 更新标签为 "城市 (时区ID) 时间："
                 timeZoneElement.textContent = `${city} (${formattedEnglishId}) 时间：`;
 
             } catch (e) {
@@ -253,13 +255,13 @@
 
         /**
          * 主要更新函数：计算和显示时间
-         * 使用 IP 时区的时间作为所有计算的基准。
+         * **关键点：超维时间和常规时间都严格基于 IP 时区的时间**
          */
         function updateClock() {
             const now = new Date();
             
             // --- A. 提取 IP 时区的 H:M:S ---
-            // 使用 Intl.DateTimeFormat 在目标时区格式化时间，以获得准确的 H:M:S
+            // 使用 Intl.DateTimeFormat 获取目标时区的准确 H:M:S 字符串
             const timeFormatter = new Intl.DateTimeFormat('en-US', {
                 hour: '2-digit', minute: '2-digit', second: '2-digit', 
                 hour12: false, 
@@ -273,7 +275,8 @@
             const normalMinutes = parseInt(mStr, 10);
             const normalSeconds = parseInt(sStr, 10);
             
-            const normalMilliseconds = now.getMilliseconds(); // 使用客户端毫秒数保证平滑过渡
+            // 使用客户端毫秒数，以确保时钟的秒针平滑、不跳帧
+            const normalMilliseconds = now.getMilliseconds(); 
 
             // --- B. 计算 超维时间 (T_super) ---
             // 基于 IP 时区的时间计算总秒数
