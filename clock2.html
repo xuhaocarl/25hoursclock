@@ -29,7 +29,7 @@
             padding: 30px 20px; 
             border-radius: 16px; 
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
-            width: 90%; 
+            width: 90%; /* 确保在窄屏上有足够的边距 */
             max-width: 600px;
             border: 1px solid #e2e8f0;
         }
@@ -43,23 +43,38 @@
 
         /* 核心修改：超维时间字体加粗、加大、增加冲击力 */
         #superTime {
-            font-size: 5rem; /* 增大手机端字体 */
-            font-weight: 900; /* 最重磅级 */
-            color: #3b82f6; /* 核心蓝色 */
-            letter-spacing: 5px; /* 增加字母间距 */
+            /* 默认值 (适用于大多数手机，如 iPhone 16) */
+            font-size: 4.5rem; /* 减小到 4.5rem，解决溢出问题 */
+            font-weight: 900; 
+            color: #3b82f6; 
+            letter-spacing: 4px; /* 略微减少间距以适应窄屏 */
             margin-bottom: 20px;
             line-height: 1;
             /* 增加微妙的发光/阴影效果，模拟屏保的质感 */
             text-shadow: 0 0 12px rgba(59, 130, 246, 0.6); 
+            white-space: nowrap; /* 确保时间不换行 */
+            overflow: hidden; /* 隐藏可能溢出的部分 */
         }
         
-        /* 桌面/平板优化 */
+        /* --- 手机排版优化 (适用于宽度小于 380px 的超窄屏) --- */
+        @media (max-width: 380px) {
+            #superTime {
+                font-size: 3.8rem; /* 针对 320px-360px 宽度手机进一步缩小字体 */
+                letter-spacing: 2px;
+            }
+            #normalTime {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* --- 桌面/平板优化 (min-width: 600px) --- */
         @media (min-width: 600px) {
             .clock-container {
                 padding: 40px 50px; 
             }
             #superTime {
                 font-size: 7rem; /* 增大桌面端字体 */
+                letter-spacing: 5px; /* 恢复更宽的间距 */
             }
         }
 
