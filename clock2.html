@@ -122,7 +122,7 @@
         <div class="footer-info">
             <!-- 可点击区域，用于切换显示 -->
             <div id="normalTimeToggle" class="toggle-btn mx-auto">
-                <!-- 初始标签，将被 JS 更新为 "城市名称 时间" -->
+                <!-- 初始标签，将被 JS 更新为 "城市 (时区ID) 时间" -->
                 <span class="label text-base" id="localTimeLabel">正在定位...</span>
                 <svg id="toggleArrow" class="arrow-icon w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
             </div>
@@ -213,11 +213,15 @@
                 const city = data.city || '本地';
                 const timeZoneId = data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
                 
+                // 格式化英文时区ID，替换下划线使其更易读
+                const formattedEnglishId = timeZoneId.replace(/_/g, ' ');
+
                 // 存储时区ID
                 window.USER_TIMEZONE_ID = timeZoneId;
 
-                // 更新标签: "城市 时间"
-                timeZoneElement.textContent = `${city} 时间：`;
+                // **核心修改：更新标签为 "城市 (时区ID) 时间："**
+                // 城市名 (中文) + 时区ID (英文/地名)
+                timeZoneElement.textContent = `${city} (${formattedEnglishId}) 时间：`;
 
             } catch (e) {
                 // 如果定位失败或API超时，回退到浏览器本地时区
@@ -249,31 +253,44 @@
 
         /**
          * 主要更新函数：计算和显示时间
+         * 使用 IP 时区的时间作为所有计算的基准。
          */
         function updateClock() {
             const now = new Date();
             
-            // A. 计算并更新超维时钟
-            const normalHours = now.getHours();
-            const normalMinutes = now.getMinutes();
-            const normalSeconds = now.getSeconds();
-            const normalMilliseconds = now.getMilliseconds();
+            // --- A. 提取 IP 时区的 H:M:S ---
+            // 使用 Intl.DateTimeFormat 在目标时区格式化时间，以获得准确的 H:M:S
+            const timeFormatter = new Intl.DateTimeFormat('en-US', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit', 
+                hour12: false, 
+                timeZone: window.USER_TIMEZONE_ID 
+            });
+
+            const targetTimeString = timeFormatter.format(now);
+            const [hStr, mStr, sStr] = targetTimeString.split(':');
+
+            const normalHours = parseInt(hStr, 10);
+            const normalMinutes = parseInt(mStr, 10);
+            const normalSeconds = parseInt(sStr, 10);
             
-            const totalNormalSeconds = (normalHours * 3600) + (normalMinutes * 60) + normalSeconds + (normalMilliseconds / 1000);
+            const normalMilliseconds = now.getMilliseconds(); // 使用客户端毫秒数保证平滑过渡
+
+            // --- B. 计算 超维时间 (T_super) ---
+            // 基于 IP 时区的时间计算总秒数
+            const totalNormalSeconds = (normalHours * 3600) + 
+                                       (normalMinutes * 60) + 
+                                       normalSeconds + 
+                                       (normalMilliseconds / 1000);
+                                       
+            // 换算得到超维时间总秒数
             const totalSuperSeconds = totalNormalSeconds * CONVERSION_RATE;
+            
+            // 更新超维时钟显示
             document.getElementById('superTime').textContent = formatTime(totalSuperSeconds);
             
-            // B. 更新常规时间显示（使用 IP 定位的时区）
-            const options = { 
-                hour: '2-digit', 
-                minute: '2-digit', 
-                second: '2-digit', 
-                hour12: false, // 24小时制
-                timeZone: window.USER_TIMEZONE_ID 
-            };
-            // 使用 toLocaleTimeString 和时区ID来获取目标时区的准确时间
-            const formattedNormalTime = now.toLocaleTimeString('zh-CN', options);
-            document.getElementById('normalTime').textContent = formattedNormalTime;
+            // --- C. 更新常规时间显示 ---
+            // 常规时间直接显示 IP 时区的 H:M:S
+            document.getElementById('normalTime').textContent = targetTimeString;
         }
 
         // --- 4. 动画和初始化控制 ---
